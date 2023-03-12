@@ -160,7 +160,7 @@ inner join categorias c on c.id=p.idcategoria
 --La cantidad de colaboradores que nacieron luego del año 1995.
 
 select count(legajo) from colaboradores
-where year(fechanacimiento)=1995
+where year(fechanacimiento)>1995
 
 --El costo total de todos los pedidos que figuren como Pagado.
 
