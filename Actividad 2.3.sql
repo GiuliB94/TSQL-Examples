@@ -25,6 +25,18 @@ where c.id not in (
     where m.Nombre='Pino' and year(FechaSolicitud)=2022
 )
 
+--ALt
+
+
+select * from clientes C
+where not exists (
+    select distinct * from pedidos P
+    inner join productos pr on pr.ID=p.IDProducto
+    inner join materiales_x_producto mp on mp.IDProducto=pr.ID
+    inner join materiales m on m.ID=mp.IDMaterial
+    where m.Nombre='Pino' and year(FechaSolicitud)=2022 and c.id=p.IDCliente
+)
+
 --Los colaboradores que no hayan realizado ninguna tarea de Lijado en pedidos que se solicitaron en el año 2021.
 
 select * from colaboradores where legajo not in(
@@ -52,11 +64,8 @@ having count(p.id)>0
 select * from clientes C 
 where ((select count(p.id) from pedidos p
 inner join envios e on e.IDPedido=p.id
-where e.FechaEnvio is not null and p.IDCliente=c.id group by p.IDCliente)*1.0)/((select count(p.id) from pedidos p
-where p.IDCliente=c.id
-group by p.IDCliente
-having count(p.id)>0
-)*1.0) >= 0.3
+where p.IDCliente=c.id))>=((select count(p.id) from pedidos p
+where p.IDCliente=c.id having count(p.id)>0)/3.0)
 
 
 --Los colaboradores que hayan realizado todas las tareas (no necesariamente en un mismo pedido).
@@ -139,7 +148,7 @@ select pr.descripcion from productos pr
 where (select count(distinct c.legajo) from colaboradores c 
 inner join Tareas_x_Pedido tp on tp.legajo=c.Legajo
 inner join pedidos p on p.ID=tp.IDPedido
-where p.IDProducto=pr.id  and c.ModalidadTrabajo='f') >=(select count(distinct c.legajo) from colaboradores c 
+where p.IDProducto=pr.id  and c.ModalidadTrabajo='f') =(select count(distinct c.legajo) from colaboradores c 
 inner join Tareas_x_Pedido tp on tp.legajo=c.Legajo
 inner join pedidos p on p.ID=tp.IDPedido
 where p.IDProducto=pr.id and c.ModalidadTrabajo='p')*2 and (select count(distinct c.legajo) from colaboradores c 
@@ -154,22 +163,27 @@ where p.IDProducto=pr.id and c.ModalidadTrabajo='p') !=0
 select p.descripcion from productos p
 where (select count(pe.id) from pedidos PE 
 where pe.IDProducto=p.id and pe.id in (select idpedido from envios)
-group by pe.IDProducto
-) < (select count(pe.id) from pedidos PE 
-left join envios e on e.IDPedido=pe.id
-where pe.IDProducto=p.id and e.FechaEnvio is null
-group by pe.IDProducto
+) > (select count(pe.id) from pedidos PE 
+where pe.IDProducto=p.id and pe.id not in (select idpedido from envios)
 ) and (select count(pe.id) from pedidos PE 
 where pe.IDProducto=p.id and pe.id in (select idpedido from envios)
-group by pe.IDProducto
-) is not null
+)!=0
+
+select p.descripcion, (select count(pe.id) from pedidos PE 
+where pe.IDProducto=p.id and pe.id in (select idpedido from envios)
+) as envios, (select count(pe.id) from pedidos PE 
+where pe.IDProducto=p.id and pe.id not in (select idpedido from envios)
+) as Noenvios, (select count(pe.id) from pedidos PE 
+where pe.IDProducto=p.id
+) as pedidos from productos p
+
 
 --Los nombre y apellidos de los clientes que hayan realizado pedidos en los años 2020, 2021 y 2022 pero que la cantidad de pedidos haya decrecido en cada año. 
 --Añadirle al listado aquellos clientes que hayan realizado exactamente la misma cantidad de pedidos en todos los años y que dicha cantidad no sea cero.
 
 select c.apellidos, c.nombres, t1.* from clientes C
-inner join (select c.id, (select count(pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2020 group by pe.IDCliente) as pedidos2020,
-(select count(pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2021 group by  pe.IDCliente) as pedidos2021,
-(select count(pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2022 group by pe.IDCliente ) as pedidos2022
+inner join (select c.id, (select count(distinct pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2020) as pedidos2020,
+(select count(distinct pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2021) as pedidos2021,
+(select count(distinct pe.id) from pedidos pe where pe.IDCliente=c.id and year(pe.FechaSolicitud)=2022) as pedidos2022
 from clientes C) t1 on t1.ID=c.ID
-where (t1.pedidos2020<t1.pedidos2021 and t1.pedidos2021<t1.pedidos2022) or (t1.pedidos2020=t1.pedidos2021 and t1.pedidos2022=t1.pedidos2021 and t1.pedidos2020 is not null)
+where (t1.pedidos2020>t1.pedidos2021 and t1.pedidos2021>t1.pedidos2022) or (t1.pedidos2020=t1.pedidos2021 and t1.pedidos2022=t1.pedidos2021 and t1.pedidos2020!=0)
