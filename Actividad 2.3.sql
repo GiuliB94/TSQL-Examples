@@ -176,7 +176,7 @@ where pe.IDProducto=p.id and pe.id not in (select idpedido from envios)
 ) as Noenvios, (select count(pe.id) from pedidos PE 
 where pe.IDProducto=p.id
 ) as pedidos from productos p
-
+@
 
 --Los nombre y apellidos de los clientes que hayan realizado pedidos en los años 2020, 2021 y 2022 pero que la cantidad de pedidos haya decrecido en cada año. 
 --Añadirle al listado aquellos clientes que hayan realizado exactamente la misma cantidad de pedidos en todos los años y que dicha cantidad no sea cero.
